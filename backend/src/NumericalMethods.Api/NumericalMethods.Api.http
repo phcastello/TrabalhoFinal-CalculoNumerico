@@ -1,0 +1,36 @@
+@NumericalMethods.Api_HostAddress = http://localhost:5000
+
+### Resolver sistema linear (stub)
+POST {{NumericalMethods.Api_HostAddress}}/api/linear-systems/solve
+Content-Type: application/json
+
+{
+  "a": [
+    [4, 2],
+    [1, 3]
+  ],
+  "b": [20, 11],
+  "method": 0,
+  "iterativeParams": {
+    "tolerance": 0.0001,
+    "maxIterations": 100,
+    "stopCondition": 0
+  },
+  "returnSteps": false
+}
+
+### Resolver raiz de função (stub)
+POST {{NumericalMethods.Api_HostAddress}}/api/roots/solve
+Content-Type: application/json
+
+{
+  "functionExpression": "x^3 - 2*x - 5",
+  "method": 0,
+  "a": 1,
+  "b": 3,
+  "initialGuess": 2,
+  "secondGuess": 2.5,
+  "tolerance": 0.0001,
+  "maxIterations": 100,
+  "returnSteps": false
+}
