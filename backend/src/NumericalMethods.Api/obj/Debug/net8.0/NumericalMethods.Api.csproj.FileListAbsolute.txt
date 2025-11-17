@@ -19,6 +19,7 @@
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Api/obj/Debug/net8.0/NumericalMethods.Api.csproj.CoreCompileInputs.cache
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Api/obj/Debug/net8.0/NumericalMethods.Api.MvcApplicationPartsAssemblyInfo.cs
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Api/obj/Debug/net8.0/NumericalMethods.Api.MvcApplicationPartsAssemblyInfo.cache
+/home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Api/obj/Debug/net8.0/NumericalMethods.Api.sourcelink.json
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Api/obj/Debug/net8.0/staticwebassets.build.json
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Api/obj/Debug/net8.0/staticwebassets.development.json
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Api/obj/Debug/net8.0/staticwebassets/msbuild.NumericalMethods.Api.Microsoft.AspNetCore.StaticWebAssets.props

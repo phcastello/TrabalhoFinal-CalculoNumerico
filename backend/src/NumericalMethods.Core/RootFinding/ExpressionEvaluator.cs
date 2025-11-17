@@ -46,6 +46,11 @@ public static class ExpressionEvaluator
         "^"
     };
 
+    private static readonly Dictionary<string, double> Constants = new(StringComparer.OrdinalIgnoreCase)
+    {
+        {"pi", Math.PI},
+        {"e", Math.E}
+    };
 
     public static Func<double, double> Compile(string expression)
     {
@@ -66,6 +71,32 @@ public static class ExpressionEvaluator
         var tokens = new List<Token>();
         var index = 0;
         var expectUnary = true;
+
+        void AddToken(Token token)
+        {
+            if (ShouldInsertImplicitMultiplication(token.Type))
+            {
+                tokens.Add(new Token(TokenType.Operator, "*"));
+            }
+
+            tokens.Add(token);
+        }
+
+        bool ShouldInsertImplicitMultiplication(TokenType nextType)
+        {
+            if (tokens.Count == 0)
+            {
+                return false;
+            }
+
+            var previousType = tokens[tokens.Count - 1].Type;
+            if (previousType is not (TokenType.Number or TokenType.Variable or TokenType.RightParenthesis))
+            {
+                return false;
+            }
+
+            return nextType is TokenType.Number or TokenType.Variable or TokenType.Function or TokenType.LeftParenthesis;
+        }
 
         while (index < expression.Length)
         {
@@ -109,7 +140,7 @@ public static class ExpressionEvaluator
                     throw new ExpressionParseException($"Número inválido: {tokenText}");
                 }
 
-                tokens.Add(new Token(TokenType.Number, tokenText, number));
+                AddToken(new Token(TokenType.Number, tokenText, number));
                 expectUnary = false;
                 continue;
             }
@@ -118,7 +149,7 @@ public static class ExpressionEvaluator
             {
                 var start = index;
                 index++;
-                while (index < expression.Length && char.IsLetter(expression[index]))
+                while (index < expression.Length && char.IsLetterOrDigit(expression[index]))
                 {
                     index++;
                 }
@@ -126,7 +157,12 @@ public static class ExpressionEvaluator
                 var name = expression[start..index];
                 if (string.Equals(name, VariableToken, StringComparison.OrdinalIgnoreCase))
                 {
-                    tokens.Add(new Token(TokenType.Variable, VariableToken));
+                    AddToken(new Token(TokenType.Variable, VariableToken));
+                    expectUnary = false;
+                }
+                else if (TryGetConstantValue(name, out var constantValue))
+                {
+                    AddToken(new Token(TokenType.Number, name, constantValue));
                     expectUnary = false;
                 }
                 else
@@ -137,7 +173,7 @@ public static class ExpressionEvaluator
                         throw new ExpressionParseException($"Função desconhecida: {name}");
                     }
 
-                    tokens.Add(new Token(TokenType.Function, lower));
+                    AddToken(new Token(TokenType.Function, lower));
                     expectUnary = true;
                 }
 
@@ -146,7 +182,7 @@ public static class ExpressionEvaluator
 
             if (current == '(')
             {
-                tokens.Add(new Token(TokenType.LeftParenthesis, "("));
+                AddToken(new Token(TokenType.LeftParenthesis, "("));
                 index++;
                 expectUnary = true;
                 continue;
@@ -154,7 +190,7 @@ public static class ExpressionEvaluator
 
             if (current == ')')
             {
-                tokens.Add(new Token(TokenType.RightParenthesis, ")"));
+                AddToken(new Token(TokenType.RightParenthesis, ")"));
                 index++;
                 expectUnary = false;
                 continue;
@@ -167,11 +203,11 @@ public static class ExpressionEvaluator
 
                 if (expectUnary && (op == "+" || op == "-"))
                 {
-                    tokens.Add(new Token(TokenType.Function, op == "-" ? "neg" : "pos"));
+                    AddToken(new Token(TokenType.Function, op == "-" ? "neg" : "pos"));
                 }
                 else
                 {
-                    tokens.Add(new Token(TokenType.Operator, op));
+                    AddToken(new Token(TokenType.Operator, op));
                 }
 
                 expectUnary = true;
@@ -271,10 +307,8 @@ public static class ExpressionEvaluator
 
     private static bool IsLeftAssociative(string op) => !RightAssociativeOperators.Contains(op);
 
-    private static bool IsSupportedFunction(string name)
-    {
-        return name is "sin" or "cos" or "tan" or "exp" or "ln" or "log10" or "sqrt";
-    }
+    private static bool IsSupportedFunction(string name) =>
+        name is "sin" or "cos" or "tan" or "exp" or "ln" or "log10" or "sqrt" or "log" or "abs";
 
     private static double Evaluate(Token[] rpn, double x)
     {
@@ -339,11 +373,24 @@ public static class ExpressionEvaluator
             "tan" => Math.Tan(value),
             "exp" => Math.Exp(value),
             "ln" => Math.Log(value),
+            "log" => Math.Log(value),
             "log10" => Math.Log10(value),
             "sqrt" => Math.Sqrt(value),
+            "abs" => Math.Abs(value),
             "neg" => -value,
             "pos" => value,
             _ => throw new ExpressionParseException($"Função desconhecida: {function}")
         };
+    }
+
+    private static bool TryGetConstantValue(string name, out double value)
+    {
+        if (Constants.TryGetValue(name, out value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
     }
 }

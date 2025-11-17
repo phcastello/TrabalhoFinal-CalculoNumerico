@@ -9,9 +9,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
 {
+    var allowedOrigins = new[]
+    {
+        "http://localhost:5173",
+        "http://localhost:4173"
+    };
+
     options.AddPolicy(CorsPolicyName, policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

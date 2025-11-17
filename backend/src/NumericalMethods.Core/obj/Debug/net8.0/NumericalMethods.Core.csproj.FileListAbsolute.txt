@@ -5,6 +5,7 @@
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Core/obj/Debug/net8.0/NumericalMethods.Core.AssemblyInfoInputs.cache
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Core/obj/Debug/net8.0/NumericalMethods.Core.AssemblyInfo.cs
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Core/obj/Debug/net8.0/NumericalMethods.Core.csproj.CoreCompileInputs.cache
+/home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Core/obj/Debug/net8.0/NumericalMethods.Core.sourcelink.json
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Core/obj/Debug/net8.0/NumericalMethods.Core.dll
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Core/obj/Debug/net8.0/refint/NumericalMethods.Core.dll
 /home/mistery/Faculdade/4o_Periodo/CalcNum/TrabalhoFinal/backend/src/NumericalMethods.Core/obj/Debug/net8.0/NumericalMethods.Core.pdb
