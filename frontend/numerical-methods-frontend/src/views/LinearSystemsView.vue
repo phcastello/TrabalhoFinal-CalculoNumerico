@@ -46,7 +46,8 @@
               <input
                 type="number"
                 step="any"
-                  :value="row[colIndex]"
+                inputmode="decimal"
+                :value="row[colIndex]"
                 @input="updateMatrixValue(rowIndex, colIndex, $event)"
               />
             </td>
@@ -63,6 +64,7 @@
           :key="index"
           type="number"
           step="any"
+          inputmode="decimal"
           :value="bVector[index]"
           @input="updateVectorValue(index, $event)"
         />
@@ -115,8 +117,8 @@ const iterativeParams = reactive({
   maxIterations: 100,
   stopCondition: IterativeStopCondition.ByResidual as IterativeStopConditionValue,
 });
-const aMatrix = ref(createMatrix(matrixSize.value)) as Ref<number[][]>;
-const bVector = ref(createVector(matrixSize.value)) as Ref<number[]>;
+const aMatrix = ref(createMatrix(matrixSize.value)) as Ref<string[][]>;
+const bVector = ref(createVector(matrixSize.value)) as Ref<string[]>;
 const response = ref<LinearSystemSolveResponseDto | null>(null);
 const error = ref<string | null>(null);
 const loading = ref(false);
@@ -157,30 +159,40 @@ watch(matrixSize, (newSize) => {
 });
 
 function createMatrix(n: number) {
-  return Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
+  return Array.from({ length: n }, () => Array.from({ length: n }, () => '0'));
 }
 
 function createVector(n: number) {
-  return Array.from({ length: n }, () => 0);
+  return Array.from({ length: n }, () => '0');
 }
 
 function updateMatrixValue(row: number, col: number, event: Event) {
   const target = event.target as HTMLInputElement | null;
-  const value = target ? Number(target.value) : 0;
+  const value = target ? target.value : '';
   const matrix = aMatrix.value!.map((r) => [...r]);
   const colCount = matrix[0]?.length ?? matrix.length;
-  const rowValues = matrix[row] ?? Array.from({ length: colCount }, () => 0);
-  rowValues[col] = Number.isFinite(value) ? value : 0;
+  const rowValues = matrix[row] ?? Array.from({ length: colCount }, () => '');
+  rowValues[col] = value;
   matrix[row] = rowValues;
   aMatrix.value = matrix;
 }
 
 function updateVectorValue(index: number, event: Event) {
   const target = event.target as HTMLInputElement | null;
-  const value = target ? Number(target.value) : 0;
+  const value = target ? target.value : '';
   const vector = [...bVector.value!];
-  vector[index] = Number.isFinite(value) ? value : 0;
+  vector[index] = value;
   bVector.value = vector;
+}
+
+function parseInputNumber(raw: string): number {
+  const trimmed = raw.trim();
+  if (trimmed === '') {
+    return 0;
+  }
+
+  const parsed = parseFloat(trimmed);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 async function solveSystem() {
@@ -191,8 +203,8 @@ async function solveSystem() {
 
   try {
     const payload: LinearSystemSolveRequestDto = {
-      a: aMatrix.value,
-      b: bVector.value,
+      a: aMatrix.value.map((row) => row.map(parseInputNumber)),
+      b: bVector.value.map(parseInputNumber),
       method: method.value,
       iterativeParams: { ...iterativeParams },
     };
