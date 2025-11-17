@@ -131,7 +131,7 @@
 
       <label class="checkbox">
         <input type="checkbox" v-model="rootRequest.returnSteps" />
-        Retornar passos (stub)
+        Retornar passos
       </label>
 
       <button type="submit" :disabled="loading">{{ loading ? 'Calculando...' : 'Encontrar raiz' }}</button>
@@ -154,6 +154,35 @@
         <h4>Raiz aproximada</h4>
         <p class="solution-value">x ≈ {{ response.root }}</p>
       </div>
+
+      <section
+        v-if="rootRequest.returnSteps && response.steps && response.steps.length > 0"
+        class="steps-section"
+      >
+        <h4>Passos da iteração</h4>
+        <table class="steps-table">
+          <thead>
+            <tr>
+              <th>Iteração</th>
+              <th v-if="methodUsaIntervalo">a</th>
+              <th v-if="methodUsaIntervalo">b</th>
+              <th>x</th>
+              <th>f(x)</th>
+              <th>Erro</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="step in response.steps" :key="step.iteration">
+              <td>{{ step.iteration }}</td>
+              <td v-if="methodUsaIntervalo">{{ step.a ?? '-' }}</td>
+              <td v-if="methodUsaIntervalo">{{ step.b ?? '-' }}</td>
+              <td>{{ step.x }}</td>
+              <td>{{ step.fx }}</td>
+              <td>{{ step.error ?? '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
 
       <button type="button" class="toggle-json" @click="showRawJson = !showRawJson">
         {{ showRawJson ? 'Ocultar JSON bruto' : 'Ver JSON bruto' }}
@@ -219,6 +248,9 @@ const isFixedPoint = computed(() => rootRequest.method === RootFindingMethod.Fix
 const isNewton = computed(() => rootRequest.method === RootFindingMethod.Newton);
 const isRegulaFalsi = computed(() => rootRequest.method === RootFindingMethod.RegulaFalsi);
 const isSecant = computed(() => rootRequest.method === RootFindingMethod.Secant);
+const methodUsaIntervalo = computed(
+  () => rootRequest.method === RootFindingMethod.Bisection || rootRequest.method === RootFindingMethod.RegulaFalsi
+);
 
 function updateNullableField(field: NullableField, event: Event) {
   const target = event.target as HTMLInputElement | null;
@@ -433,6 +465,27 @@ button:disabled {
   font-family: monospace;
   font-size: 1rem;
   margin: 0.25rem 0 0;
+}
+
+.steps-section {
+  margin-top: 1rem;
+}
+
+.steps-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.steps-table th,
+.steps-table td {
+  border: 1px solid #d0d7de;
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+}
+
+.steps-table th {
+  background-color: #e2e8f0;
 }
 
 .toggle-json {

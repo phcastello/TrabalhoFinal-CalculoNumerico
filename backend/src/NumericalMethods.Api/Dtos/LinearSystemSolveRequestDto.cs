@@ -8,5 +8,4 @@ public sealed class LinearSystemSolveRequestDto
     public double[] B { get; set; } = Array.Empty<double>();
     public LinearSolverMethod Method { get; set; }
     public IterativeParamsDto? IterativeParams { get; set; }
-    public bool ReturnSteps { get; set; }
 }

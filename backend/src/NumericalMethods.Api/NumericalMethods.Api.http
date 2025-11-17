@@ -15,8 +15,7 @@ Content-Type: application/json
     "tolerance": 0.0001,
     "maxIterations": 100,
     "stopCondition": 0
-  },
-  "returnSteps": false
+  }
 }
 
 ### Resolver raiz de função (stub)

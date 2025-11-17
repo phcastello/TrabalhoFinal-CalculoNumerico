@@ -30,7 +30,16 @@ public static class RootFindingMappings
             Root = result.Root,
             Iterations = result.Iterations,
             ElapsedMs = result.ElapsedMs,
-            Message = result.Message
+            Message = result.Message,
+            Steps = result.Steps?.Select(s => new RootFindingStepDto
+            {
+                Iteration = s.Iteration,
+                X = s.X,
+                Fx = s.Fx,
+                A = s.A,
+                B = s.B,
+                Error = s.Error
+            }).ToList()
         };
     }
 }

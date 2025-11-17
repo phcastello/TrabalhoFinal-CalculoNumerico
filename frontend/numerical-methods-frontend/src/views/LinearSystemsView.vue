@@ -34,11 +34,6 @@
         </select>
       </label>
 
-      <label class="checkbox">
-        <input type="checkbox" v-model="returnSteps" />
-        Retornar passos (stub)
-      </label>
-
       <button type="submit" :disabled="loading">{{ loading ? 'Resolvendo...' : 'Resolver sistema' }}</button>
     </form>
 
@@ -115,7 +110,6 @@ import { IterativeStopCondition, LinearSolverMethod, SolverStatus } from '../typ
 
 const matrixSize = ref(3);
 const method = ref<LinearSolverMethodValue>(LinearSolverMethod.Gauss);
-const returnSteps = ref(false);
 const iterativeParams = reactive({
   tolerance: 1e-6,
   maxIterations: 100,
@@ -201,7 +195,6 @@ async function solveSystem() {
       b: bVector.value,
       method: method.value,
       iterativeParams: { ...iterativeParams },
-      returnSteps: returnSteps.value,
     };
 
     const { data } = await api.post<LinearSystemSolveResponseDto>('/api/linear-systems/solve', payload);
@@ -271,13 +264,6 @@ label {
   flex-direction: column;
   font-weight: 600;
   gap: 0.35rem;
-}
-
-.checkbox {
-  align-items: center;
-  flex-direction: row;
-  font-weight: 500;
-  gap: 0.5rem;
 }
 
 input,

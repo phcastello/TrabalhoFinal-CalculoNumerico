@@ -9,4 +9,5 @@ public sealed class RootFindingResult
     public int Iterations { get; set; }
     public double ElapsedMs { get; set; }
     public string Message { get; set; } = string.Empty;
+    public List<RootFindingStep>? Steps { get; set; }
 }

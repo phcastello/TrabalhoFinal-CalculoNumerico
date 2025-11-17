@@ -46,7 +46,6 @@ export interface LinearSystemSolveRequestDto {
   b: number[];
   method: LinearSolverMethodValue;
   iterativeParams?: IterativeParamsDto;
-  returnSteps: boolean;
 }
 
 export interface LinearSystemSolveResponseDto {
@@ -71,10 +70,20 @@ export interface RootFindingSolveRequestDto {
   returnSteps: boolean;
 }
 
+export interface RootFindingStepResponseDto {
+  iteration: number;
+  x: number;
+  fx: number;
+  a?: number | null;
+  b?: number | null;
+  error?: number | null;
+}
+
 export interface RootFindingSolveResponseDto {
   status: SolverStatusValue;
-  root?: number | null;
+  root: number | null;
   iterations: number;
   elapsedMs: number;
   message: string;
+  steps?: RootFindingStepResponseDto[];
 }

@@ -14,8 +14,7 @@ public sealed class LinearSystemSolverService : ILinearSystemSolverService
     public SolverResult Solve(
         LinearSystem system,
         LinearSolverMethod method,
-        IterativeParams? iterativeParams = null,
-        bool returnSteps = false)
+        IterativeParams? iterativeParams = null)
     {
         return method switch
         {

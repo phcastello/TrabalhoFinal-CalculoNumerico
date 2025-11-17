@@ -22,7 +22,7 @@ public sealed class LinearSystemsController : ControllerBase
     {
         var system = request.ToDomain();
         var iterativeParams = request.IterativeParams.ToDomain();
-        var solverResult = _solverService.Solve(system, request.Method, iterativeParams, request.ReturnSteps);
+        var solverResult = _solverService.Solve(system, request.Method, iterativeParams);
         return Ok(solverResult.ToDto());
     }
 }

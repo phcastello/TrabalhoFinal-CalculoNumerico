@@ -84,11 +84,11 @@ public sealed class RootFindingService : IRootFindingService
 
         return request.Method switch
         {
-            RootFindingMethod.Bisection => SolveWithBisection(function, request),
-            RootFindingMethod.FixedPoint => SolveWithFixedPoint(function, phi!, request),
-            RootFindingMethod.Newton => SolveWithNewton(function, derivative, request),
-            RootFindingMethod.RegulaFalsi => SolveWithRegulaFalsi(function, request),
-            RootFindingMethod.Secant => SolveWithSecant(function, request),
+            RootFindingMethod.Bisection => SolveWithBisection(function, request, returnSteps),
+            RootFindingMethod.FixedPoint => SolveWithFixedPoint(function, phi!, request, returnSteps),
+            RootFindingMethod.Newton => SolveWithNewton(function, derivative, request, returnSteps),
+            RootFindingMethod.RegulaFalsi => SolveWithRegulaFalsi(function, request, returnSteps),
+            RootFindingMethod.Secant => SolveWithSecant(function, request, returnSteps),
             _ => new RootFindingResult
             {
                 Status = SolverStatus.NotImplemented,
@@ -100,7 +100,7 @@ public sealed class RootFindingService : IRootFindingService
         };
     }
 
-    private RootFindingResult SolveWithBisection(Func<double, double> f, RootFindingRequest request)
+    private RootFindingResult SolveWithBisection(Func<double, double> f, RootFindingRequest request, bool returnSteps)
     {
         if (!request.A.HasValue || !request.B.HasValue)
         {
@@ -115,13 +115,14 @@ public sealed class RootFindingService : IRootFindingService
         }
 
         var stopwatch = Stopwatch.StartNew();
+        var steps = returnSteps ? new List<RootFindingStep>() : null;
         var fa = f(a);
         var fb = f(b);
 
         if (fa * fb > 0)
         {
             stopwatch.Stop();
-            return Invalid("f(a) e f(b) devem ter sinais opostos para a Bisseção.");
+            return Invalid("f(a) e f(b) devem ter sinais opostos para a Bisseção.", steps);
         }
 
         double c = double.NaN;
@@ -129,7 +130,7 @@ public sealed class RootFindingService : IRootFindingService
         var iterationCount = 0;
         if (Math.Abs(b - a) < request.Tolerance)
         {
-            return Success((a + b) / 2.0, iterationCount, stopwatch);
+            return Success((a + b) / 2.0, iterationCount, stopwatch, steps);
         }
 
         while (Math.Abs(b - a) > request.Tolerance && iterationCount < request.MaxIterations)
@@ -139,10 +140,12 @@ public sealed class RootFindingService : IRootFindingService
             var finicio = f(a);
             var meio = (a + b) / 2.0;
             var fmeio = f(meio);
+            var currentError = Math.Abs(b - a);
 
             if (HasDiverged(meio, fmeio))
             {
-                return Divergence($"Iterações divergiram no método da Bisseção.", meio, iterationCount, stopwatch);
+                AddStep(steps, iterationCount, meio, fmeio, a, b, currentError);
+                return Divergence($"Iterações divergiram no método da Bisseção.", meio, iterationCount, stopwatch, steps);
             }
 
             if (finicio * fmeio < 0)
@@ -155,18 +158,21 @@ public sealed class RootFindingService : IRootFindingService
                 a = meio;
                 fa = fmeio;
             }
+
+            currentError = Math.Abs(b - a);
+            AddStep(steps, iterationCount, meio, fmeio, a, b, currentError);
         }
 
         c = (a + b) / 2.0;
         if (Math.Abs(b - a) > request.Tolerance)
         {
-            return MaxIterations(c, iterationCount, stopwatch);
+            return MaxIterations(c, iterationCount, stopwatch, steps);
         }
 
-        return Success(c, iterationCount, stopwatch);
+        return Success(c, iterationCount, stopwatch, steps);
     }
 
-    private RootFindingResult SolveWithRegulaFalsi(Func<double, double> f, RootFindingRequest request)
+    private RootFindingResult SolveWithRegulaFalsi(Func<double, double> f, RootFindingRequest request, bool returnSteps)
     {
         if (!request.A.HasValue || !request.B.HasValue)
         {
@@ -181,13 +187,14 @@ public sealed class RootFindingService : IRootFindingService
         }
 
         var stopwatch = Stopwatch.StartNew();
+        var steps = returnSteps ? new List<RootFindingStep>() : null;
         var fa = f(a);
         var fb = f(b);
 
         if (fa * fb > 0)
         {
             stopwatch.Stop();
-            return Invalid("f(a) e f(b) devem ter sinais opostos para Regula Falsi.");
+            return Invalid("f(a) e f(b) devem ter sinais opostos para Regula Falsi.", steps);
         }
 
         var delta1 = request.Tolerance;
@@ -195,17 +202,17 @@ public sealed class RootFindingService : IRootFindingService
 
         if (Math.Abs(b - a) < delta1)
         {
-            return Success((a + b) / 2.0, 0, stopwatch);
+            return Success((a + b) / 2.0, 0, stopwatch, steps);
         }
 
         if (Math.Abs(fa) < delta2)
         {
-            return Success(a, 0, stopwatch);
+            return Success(a, 0, stopwatch, steps);
         }
 
         if (Math.Abs(fb) < delta2)
         {
-            return Success(b, 0, stopwatch);
+            return Success(b, 0, stopwatch, steps);
         }
 
         var iteration = 1;
@@ -216,7 +223,8 @@ public sealed class RootFindingService : IRootFindingService
             var denominator = fb - fa;
             if (Math.Abs(denominator) < SmallNumber)
             {
-                return Divergence("Denominador próximo de zero em Regula Falsi.", double.NaN, iteration, stopwatch);
+                AddStep(steps, iteration, double.NaN, double.NaN, a, b, Math.Abs(b - a));
+                return Divergence("Denominador próximo de zero em Regula Falsi.", double.NaN, iteration, stopwatch, steps);
             }
 
             var x = (a * fb - b * fa) / denominator;
@@ -224,14 +232,16 @@ public sealed class RootFindingService : IRootFindingService
 
             if (HasDiverged(x, fx))
             {
-                return Divergence("Iterações divergiram em Regula Falsi.", x, iteration, stopwatch);
+                AddStep(steps, iteration, x, fx, a, b, Math.Abs(b - a));
+                return Divergence("Iterações divergiram em Regula Falsi.", x, iteration, stopwatch, steps);
             }
 
             if (Math.Abs(fx) < delta2 || iteration > request.MaxIterations)
             {
+                AddStep(steps, iteration, x, fx, a, b, Math.Abs(b - a));
                 return iteration > request.MaxIterations
-                    ? MaxIterations(x, iteration, stopwatch)
-                    : Success(x, iteration, stopwatch);
+                    ? MaxIterations(x, iteration, stopwatch, steps)
+                    : Success(x, iteration, stopwatch, steps);
             }
 
             if (M * fx > 0)
@@ -245,17 +255,19 @@ public sealed class RootFindingService : IRootFindingService
                 fb = fx;
             }
 
+            AddStep(steps, iteration, x, fx, a, b, Math.Abs(b - a));
+
             if (Math.Abs(b - a) < delta1)
             {
                 var midpoint = (a + b) / 2.0;
-                return Success(midpoint, iteration, stopwatch);
+                return Success(midpoint, iteration, stopwatch, steps);
             }
 
             iteration++;
         }
     }
 
-    private RootFindingResult SolveWithSecant(Func<double, double> f, RootFindingRequest request)
+    private RootFindingResult SolveWithSecant(Func<double, double> f, RootFindingRequest request, bool returnSteps)
     {
         var firstGuess = request.InitialGuess;
         var secondGuess = request.SecondGuess;
@@ -284,15 +296,16 @@ public sealed class RootFindingService : IRootFindingService
         var f0 = f(x0);
         var f1 = f(x1);
         var stopwatch = Stopwatch.StartNew();
+        var steps = returnSteps ? new List<RootFindingStep>() : null;
 
         if (Math.Abs(f0) < request.Tolerance)
         {
-            return Success(x0, 0, stopwatch);
+            return Success(x0, 0, stopwatch, steps);
         }
 
         if (Math.Abs(f1) < request.Tolerance || Math.Abs(x1 - x0) < request.Tolerance)
         {
-            return Success(x1, 0, stopwatch);
+            return Success(x1, 0, stopwatch, steps);
         }
 
         var iteration = 1;
@@ -302,22 +315,27 @@ public sealed class RootFindingService : IRootFindingService
             var denominator = f1 - f0;
             if (Math.Abs(denominator) < SmallNumber)
             {
-                return Divergence("Denominador próximo de zero no método da Secante.", x1, iteration, stopwatch);
+                AddStep(steps, iteration, x1, f1, null, null, Math.Abs(x1 - x0));
+                return Divergence("Denominador próximo de zero no método da Secante.", x1, iteration, stopwatch, steps);
             }
 
             var x2 = x1 - f1 * (x1 - x0) / denominator;
             var f2 = f(x2);
+            var error = Math.Abs(x2 - x1);
 
             if (HasDiverged(x2, f2))
             {
-                return Divergence("Iterações divergiram no método da Secante.", x2, iteration, stopwatch);
+                AddStep(steps, iteration, x2, f2, null, null, error);
+                return Divergence("Iterações divergiram no método da Secante.", x2, iteration, stopwatch, steps);
             }
 
-            if (Math.Abs(f2) < request.Tolerance || Math.Abs(x2 - x1) < request.Tolerance || iteration > request.MaxIterations)
+            AddStep(steps, iteration, x2, f2, null, null, error);
+
+            if (Math.Abs(f2) < request.Tolerance || error < request.Tolerance || iteration > request.MaxIterations)
             {
                 return iteration > request.MaxIterations
-                    ? MaxIterations(x2, iteration, stopwatch)
-                    : Success(x2, iteration, stopwatch);
+                    ? MaxIterations(x2, iteration, stopwatch, steps)
+                    : Success(x2, iteration, stopwatch, steps);
             }
 
             x0 = x1;
@@ -328,7 +346,7 @@ public sealed class RootFindingService : IRootFindingService
         }
     }
 
-    private RootFindingResult SolveWithNewton(Func<double, double> f, Func<double, double>? derivative, RootFindingRequest request)
+    private RootFindingResult SolveWithNewton(Func<double, double> f, Func<double, double>? derivative, RootFindingRequest request, bool returnSteps)
     {
         if (!request.InitialGuess.HasValue)
         {
@@ -337,32 +355,38 @@ public sealed class RootFindingService : IRootFindingService
 
         var x0 = request.InitialGuess.Value;
         var stopwatch = Stopwatch.StartNew();
+        var steps = returnSteps ? new List<RootFindingStep>() : null;
         var fx = f(x0);
 
         if (HasDiverged(x0, fx))
         {
-            return Divergence("Iterações divergiram no método de Newton.", x0, 0, stopwatch);
+            AddStep(steps, 0, x0, fx, null, null, null);
+            return Divergence("Iterações divergiram no método de Newton.", x0, 0, stopwatch, steps);
         }
 
         if (Math.Abs(fx) <= request.Tolerance)
         {
-            return Success(x0, 0, stopwatch);
+            return Success(x0, 0, stopwatch, steps);
         }
 
         var iteration = 1;
         var derivativeAtX0 = derivative?.Invoke(x0) ?? ApproximateDerivative(f, x0);
         if (Math.Abs(derivativeAtX0) < SmallNumber)
         {
-            return Divergence("Derivada próxima de zero no método de Newton.", x0, iteration, stopwatch);
+            return Divergence("Derivada próxima de zero no método de Newton.", x0, iteration, stopwatch, steps);
         }
 
         var x1 = x0 - fx / derivativeAtX0;
         fx = f(x1);
+        var error = Math.Abs(x1 - x0);
 
         if (HasDiverged(x1, fx))
         {
-            return Divergence("Iterações divergiram no método de Newton.", x1, iteration, stopwatch);
+            AddStep(steps, iteration, x1, fx, null, null, error);
+            return Divergence("Iterações divergiram no método de Newton.", x1, iteration, stopwatch, steps);
         }
+
+        AddStep(steps, iteration, x1, fx, null, null, error);
 
         while (Math.Abs(fx) > request.Tolerance && Math.Abs(x1 - x0) > request.Tolerance && iteration <= request.MaxIterations)
         {
@@ -372,28 +396,32 @@ public sealed class RootFindingService : IRootFindingService
             var derivativeAtX = derivative?.Invoke(x0) ?? ApproximateDerivative(f, x0);
             if (Math.Abs(derivativeAtX) < SmallNumber)
             {
-                return Divergence("Derivada próxima de zero no método de Newton.", x0, iteration, stopwatch);
+                return Divergence("Derivada próxima de zero no método de Newton.", x0, iteration, stopwatch, steps);
             }
 
             var fxAtX0 = f(x0);
             x1 = x0 - fxAtX0 / derivativeAtX;
             fx = f(x1);
+            error = Math.Abs(x1 - x0);
 
             if (HasDiverged(x1, fx))
             {
-                return Divergence("Iterações divergiram no método de Newton.", x1, iteration, stopwatch);
+                AddStep(steps, iteration, x1, fx, null, null, error);
+                return Divergence("Iterações divergiram no método de Newton.", x1, iteration, stopwatch, steps);
             }
+
+            AddStep(steps, iteration, x1, fx, null, null, error);
         }
 
         if (Math.Abs(fx) > request.Tolerance && Math.Abs(x1 - x0) > request.Tolerance && iteration > request.MaxIterations)
         {
-            return MaxIterations(x1, iteration, stopwatch);
+            return MaxIterations(x1, iteration, stopwatch, steps);
         }
 
-        return Success(x1, iteration, stopwatch);
+        return Success(x1, iteration, stopwatch, steps);
     }
 
-    private RootFindingResult SolveWithFixedPoint(Func<double, double> f, Func<double, double> phi, RootFindingRequest request)
+    private RootFindingResult SolveWithFixedPoint(Func<double, double> f, Func<double, double> phi, RootFindingRequest request, bool returnSteps)
     {
         if (!request.InitialGuess.HasValue)
         {
@@ -402,11 +430,12 @@ public sealed class RootFindingService : IRootFindingService
 
         var x0 = request.InitialGuess.Value;
         var stopwatch = Stopwatch.StartNew();
+        var steps = returnSteps ? new List<RootFindingStep>() : null;
         var fx0 = f(x0);
 
         if (Math.Abs(fx0) < request.Tolerance)
         {
-            return Success(x0, 0, stopwatch);
+            return Success(x0, 0, stopwatch, steps);
         }
 
         var iteration = 1;
@@ -415,22 +444,51 @@ public sealed class RootFindingService : IRootFindingService
         {
             var x1 = phi(x0);
             var fx1 = f(x1);
+            var error = Math.Abs(x1 - x0);
 
             if (HasDiverged(x1, fx1))
             {
-                return Divergence("Iterações divergiram no método do ponto fixo.", x1, iteration, stopwatch);
+                AddStep(steps, iteration, x1, fx1, null, null, error);
+                return Divergence("Iterações divergiram no método do ponto fixo.", x1, iteration, stopwatch, steps);
             }
 
-            if (Math.Abs(fx1) < request.Tolerance || Math.Abs(x1 - x0) < request.Tolerance || iteration > request.MaxIterations)
+            AddStep(steps, iteration, x1, fx1, null, null, error);
+
+            if (Math.Abs(fx1) < request.Tolerance || error < request.Tolerance || iteration > request.MaxIterations)
             {
                 return iteration > request.MaxIterations
-                    ? MaxIterations(x1, iteration, stopwatch)
-                    : Success(x1, iteration, stopwatch);
+                    ? MaxIterations(x1, iteration, stopwatch, steps)
+                    : Success(x1, iteration, stopwatch, steps);
             }
 
             x0 = x1;
             iteration++;
         }
+    }
+
+    private static void AddStep(
+        List<RootFindingStep>? steps,
+        int iteration,
+        double x,
+        double fx,
+        double? a = null,
+        double? b = null,
+        double? error = null)
+    {
+        if (steps is null)
+        {
+            return;
+        }
+
+        steps.Add(new RootFindingStep
+        {
+            Iteration = iteration,
+            X = x,
+            Fx = fx,
+            A = a,
+            B = b,
+            Error = error
+        });
     }
 
     private static double ApproximateDerivative(Func<double, double> f, double x)
@@ -451,7 +509,7 @@ public sealed class RootFindingService : IRootFindingService
         return Math.Abs(value) > DivergenceThreshold || Math.Abs(fx) > DivergenceThreshold;
     }
 
-    private static RootFindingResult Invalid(string message)
+    private static RootFindingResult Invalid(string message, List<RootFindingStep>? steps = null)
     {
         return new RootFindingResult
         {
@@ -459,11 +517,12 @@ public sealed class RootFindingService : IRootFindingService
             Message = message,
             Root = null,
             Iterations = 0,
-            ElapsedMs = 0
+            ElapsedMs = 0,
+            Steps = steps
         };
     }
 
-    private static RootFindingResult Success(double root, int iterations, Stopwatch stopwatch)
+    private static RootFindingResult Success(double root, int iterations, Stopwatch stopwatch, List<RootFindingStep>? steps = null)
     {
         stopwatch.Stop();
         return new RootFindingResult
@@ -472,11 +531,12 @@ public sealed class RootFindingService : IRootFindingService
             Root = root,
             Iterations = iterations,
             ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
-            Message = string.Empty
+            Message = string.Empty,
+            Steps = steps
         };
     }
 
-    private static RootFindingResult Divergence(string message, double? root, int iterations, Stopwatch stopwatch)
+    private static RootFindingResult Divergence(string message, double? root, int iterations, Stopwatch stopwatch, List<RootFindingStep>? steps = null)
     {
         stopwatch.Stop();
         return new RootFindingResult
@@ -485,11 +545,12 @@ public sealed class RootFindingService : IRootFindingService
             Message = message,
             Root = root,
             Iterations = iterations,
-            ElapsedMs = stopwatch.Elapsed.TotalMilliseconds
+            ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
+            Steps = steps
         };
     }
 
-    private static RootFindingResult MaxIterations(double root, int iterations, Stopwatch stopwatch)
+    private static RootFindingResult MaxIterations(double root, int iterations, Stopwatch stopwatch, List<RootFindingStep>? steps = null)
     {
         stopwatch.Stop();
         return new RootFindingResult
@@ -498,7 +559,8 @@ public sealed class RootFindingService : IRootFindingService
             Message = "Número máximo de iterações atingido sem convergência na tolerância especificada.",
             Root = root,
             Iterations = iterations,
-            ElapsedMs = stopwatch.Elapsed.TotalMilliseconds
+            ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
+            Steps = steps
         };
     }
 }
