@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NumericalMethods.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4cc095e58511b97fd42a99c4788a441df495602d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bfeada730981a55fbf57446b0602787640aedeb0")]
 [assembly: System.Reflection.AssemblyProductAttribute("NumericalMethods.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NumericalMethods.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -16,6 +16,25 @@
         </select>
       </label>
 
+      <label v-if="rootRequest.method === RootFindingMethod.FixedPoint">
+        Função de iteração φ(x)
+        <input
+          type="text"
+          v-model="rootRequest.phiExpression"
+          :required="rootRequest.method === RootFindingMethod.FixedPoint"
+          placeholder="Obrigatória para ponto fixo: φ(x)"
+        />
+      </label>
+
+      <label v-if="rootRequest.method === RootFindingMethod.Newton">
+        Derivada f'(x) (opcional)
+        <input
+          type="text"
+          v-model="rootRequest.derivativeExpression"
+          placeholder="Opcional. Se não for preenchido, será usada uma aproximação numérica da derivada."
+        />
+      </label>
+
       <label>
         Intervalo [a, b] - a
         <input type="number" step="any" :value="rootRequest.a ?? ''" @input="updateNullableField('a', $event)" />
@@ -92,6 +111,8 @@ type NullableField = 'a' | 'b' | 'initialGuess' | 'secondGuess';
 
 interface RootFormRequest {
   functionExpression: string;
+  phiExpression: string;
+  derivativeExpression: string;
   method: RootFindingMethodValue;
   a: number | null;
   b: number | null;
@@ -104,6 +125,8 @@ interface RootFormRequest {
 
 const rootRequest = reactive<RootFormRequest>({
   functionExpression: '',
+  phiExpression: '',
+  derivativeExpression: '',
   method: RootFindingMethod.Bisection,
   a: null,
   b: null,
@@ -149,6 +172,11 @@ async function solveRoot() {
   try {
     const payload: RootFindingSolveRequestDto = {
       functionExpression: rootRequest.functionExpression,
+      phiExpression: rootRequest.method === RootFindingMethod.FixedPoint ? rootRequest.phiExpression : undefined,
+      derivativeExpression:
+        rootRequest.method === RootFindingMethod.Newton && rootRequest.derivativeExpression.trim() !== ''
+          ? rootRequest.derivativeExpression
+          : undefined,
       method: rootRequest.method,
       a: rootRequest.a ?? undefined,
       b: rootRequest.b ?? undefined,

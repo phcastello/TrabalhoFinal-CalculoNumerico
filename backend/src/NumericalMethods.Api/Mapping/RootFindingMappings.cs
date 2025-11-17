@@ -10,6 +10,8 @@ public static class RootFindingMappings
         return new RootFindingRequest
         {
             FunctionExpression = dto.FunctionExpression,
+            PhiExpression = dto.PhiExpression,
+            DerivativeExpression = dto.DerivativeExpression,
             Method = dto.Method,
             A = dto.A,
             B = dto.B,

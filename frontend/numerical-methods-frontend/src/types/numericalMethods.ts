@@ -59,6 +59,8 @@ export interface LinearSystemSolveResponseDto {
 
 export interface RootFindingSolveRequestDto {
   functionExpression: string;
+  phiExpression?: string;
+  derivativeExpression?: string;
   method: RootFindingMethodValue;
   a?: number;
   b?: number;
