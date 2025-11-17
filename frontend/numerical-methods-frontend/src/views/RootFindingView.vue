@@ -1,69 +1,133 @@
 <template>
   <section class="card">
     <h2>Raízes de Funções</h2>
-    <form class="form-grid" @submit.prevent="solveRoot()">
-      <label>
-        Função f(x)
-        <input type="text" v-model="rootRequest.functionExpression" placeholder="Ex.: x^3 - 2*x - 5" />
-      </label>
+    <form class="form" @submit.prevent="solveRoot()">
+      <section class="form-section">
+        <h3>Parâmetros gerais</h3>
+        <div class="form-grid">
+          <label>
+            Função f(x)
+            <input type="text" v-model="rootRequest.functionExpression" required placeholder="Ex.: x^3 - 2*x - 5" />
+          </label>
 
-      <label>
-        Método
-        <select v-model.number="rootRequest.method">
-          <option v-for="option in rootMethods" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
-      </label>
+          <label>
+            Método
+            <select v-model.number="rootRequest.method" required>
+              <option v-for="option in rootMethods" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
 
-      <label v-if="rootRequest.method === RootFindingMethod.FixedPoint">
-        Função de iteração φ(x)
-        <input
-          type="text"
-          v-model="rootRequest.phiExpression"
-          :required="rootRequest.method === RootFindingMethod.FixedPoint"
-          placeholder="Obrigatória para ponto fixo: φ(x)"
-        />
-      </label>
+          <label>
+            Tolerância
+            <input type="number" step="any" v-model.number="rootRequest.tolerance" required />
+          </label>
 
-      <label v-if="rootRequest.method === RootFindingMethod.Newton">
-        Derivada f'(x) (opcional)
-        <input
-          type="text"
-          v-model="rootRequest.derivativeExpression"
-          placeholder="Opcional. Se não for preenchido, será usada uma aproximação numérica da derivada."
-        />
-      </label>
+          <label>
+            Máx. Iterações
+            <input type="number" min="1" v-model.number="rootRequest.maxIterations" required />
+          </label>
+        </div>
+      </section>
 
-      <label>
-        Intervalo [a, b] - a
-        <input type="number" step="any" :value="rootRequest.a ?? ''" @input="updateNullableField('a', $event)" />
-      </label>
+      <section class="form-section">
+        <h3>Parâmetros específicos do método</h3>
+        <div class="form-grid">
+          <template v-if="isBisection || isRegulaFalsi">
+            <label>
+              Intervalo [a, b] - a
+              <input
+                type="number"
+                step="any"
+                :value="rootRequest.a ?? ''"
+                @input="updateNullableField('a', $event)"
+                required
+              />
+            </label>
 
-      <label>
-        Intervalo [a, b] - b
-        <input type="number" step="any" :value="rootRequest.b ?? ''" @input="updateNullableField('b', $event)" />
-      </label>
+            <label>
+              Intervalo [a, b] - b
+              <input
+                type="number"
+                step="any"
+                :value="rootRequest.b ?? ''"
+                @input="updateNullableField('b', $event)"
+                required
+              />
+            </label>
+          </template>
 
-      <label>
-        Chute inicial
-        <input type="number" step="any" :value="rootRequest.initialGuess ?? ''" @input="updateNullableField('initialGuess', $event)" />
-      </label>
+          <template v-else-if="isNewton">
+            <label>
+              Chute inicial
+              <input
+                type="number"
+                step="any"
+                :value="rootRequest.initialGuess ?? ''"
+                @input="updateNullableField('initialGuess', $event)"
+                required
+              />
+            </label>
 
-      <label>
-        Segundo chute
-        <input type="number" step="any" :value="rootRequest.secondGuess ?? ''" @input="updateNullableField('secondGuess', $event)" />
-      </label>
+            <label>
+              Derivada f'(x) (opcional)
+              <input
+                type="text"
+                v-model="rootRequest.derivativeExpression"
+                placeholder="Se não for preenchido, será usada uma aproximação numérica da derivada."
+              />
+            </label>
+          </template>
 
-      <label>
-        Tolerância
-        <input type="number" step="any" v-model.number="rootRequest.tolerance" />
-      </label>
+          <template v-else-if="isSecant">
+            <label>
+              Chute inicial (x_0)
+              <input
+                type="number"
+                step="any"
+                :value="rootRequest.initialGuess ?? ''"
+                @input="updateNullableField('initialGuess', $event)"
+                required
+              />
+            </label>
 
-      <label>
-        Máx. Iterações
-        <input type="number" min="1" v-model.number="rootRequest.maxIterations" />
-      </label>
+            <label>
+              Segundo chute (x_1)
+              <input
+                type="number"
+                step="any"
+                :value="rootRequest.secondGuess ?? ''"
+                @input="updateNullableField('secondGuess', $event)"
+                required
+              />
+            </label>
+          </template>
+
+          <template v-else-if="isFixedPoint">
+            <label>
+              Função de iteração φ(x)
+              <input
+                type="text"
+                v-model="rootRequest.phiExpression"
+                required
+                placeholder="Obrigatória para ponto fixo: φ(x)"
+              />
+            </label>
+
+            <label>
+              Chute inicial (x_0)
+              <input
+                type="number"
+                step="any"
+                :value="rootRequest.initialGuess ?? ''"
+                @input="updateNullableField('initialGuess', $event)"
+                required
+              />
+            </label>
+          </template>
+        </div>
+      </section>
 
       <label class="checkbox">
         <input type="checkbox" v-model="rootRequest.returnSteps" />
@@ -150,6 +214,12 @@ const rootMethods = [
   { value: RootFindingMethod.Secant, label: 'Secante' },
 ];
 
+const isBisection = computed(() => rootRequest.method === RootFindingMethod.Bisection);
+const isFixedPoint = computed(() => rootRequest.method === RootFindingMethod.FixedPoint);
+const isNewton = computed(() => rootRequest.method === RootFindingMethod.Newton);
+const isRegulaFalsi = computed(() => rootRequest.method === RootFindingMethod.RegulaFalsi);
+const isSecant = computed(() => rootRequest.method === RootFindingMethod.Secant);
+
 function updateNullableField(field: NullableField, event: Event) {
   const target = event.target as HTMLInputElement | null;
   const rawValue = target?.value ?? '';
@@ -172,19 +242,24 @@ async function solveRoot() {
   try {
     const payload: RootFindingSolveRequestDto = {
       functionExpression: rootRequest.functionExpression,
-      phiExpression: rootRequest.method === RootFindingMethod.FixedPoint ? rootRequest.phiExpression : undefined,
-      derivativeExpression:
-        rootRequest.method === RootFindingMethod.Newton && rootRequest.derivativeExpression.trim() !== ''
-          ? rootRequest.derivativeExpression
-          : undefined,
       method: rootRequest.method,
-      a: rootRequest.a ?? undefined,
-      b: rootRequest.b ?? undefined,
-      initialGuess: rootRequest.initialGuess ?? undefined,
-      secondGuess: rootRequest.secondGuess ?? undefined,
       tolerance: rootRequest.tolerance,
       maxIterations: rootRequest.maxIterations,
       returnSteps: rootRequest.returnSteps,
+      ...(isFixedPoint.value ? { phiExpression: rootRequest.phiExpression } : {}),
+      ...(isNewton.value && rootRequest.derivativeExpression.trim() !== ''
+        ? { derivativeExpression: rootRequest.derivativeExpression }
+        : {}),
+      ...(isBisection.value || isRegulaFalsi.value
+        ? {
+            a: rootRequest.a ?? undefined,
+            b: rootRequest.b ?? undefined,
+          }
+        : {}),
+      ...(isNewton.value || isSecant.value || isFixedPoint.value
+        ? { initialGuess: rootRequest.initialGuess ?? undefined }
+        : {}),
+      ...(isSecant.value ? { secondGuess: rootRequest.secondGuess ?? undefined } : {}),
     };
 
     const { data } = await api.post<RootFindingSolveResponseDto>('/api/roots/solve', payload);
@@ -253,6 +328,16 @@ function mapStatusToClass(status: SolverStatusValue): string {
   border: 1px solid #d0d7de;
   border-radius: 8px;
   padding: 1.5rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-section h3 {
+  margin: 0 0 0.5rem;
 }
 
 .form-grid {
