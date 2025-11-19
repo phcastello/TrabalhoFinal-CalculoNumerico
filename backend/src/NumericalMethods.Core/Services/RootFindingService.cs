@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using NumericalMethods.Core.Common;
 using NumericalMethods.Core.RootFinding;
@@ -35,7 +35,7 @@ public sealed class RootFindingService : IRootFindingService
         }
         catch (ExpressionParseException)
         {
-            return Invalid("Expressão inválida para f(x).");
+            return Invalid("Expressão inválida para φ(x).");
         }
         catch (Exception)
         {
@@ -49,7 +49,7 @@ public sealed class RootFindingService : IRootFindingService
         {
             if (string.IsNullOrWhiteSpace(request.PhiExpression))
             {
-                return Invalid("É necessário fornecer φ(x) para o método do ponto fixo.");
+                return Invalid("É É necessário fornecer φ(x) para o método do ponto fixo.");
             }
 
             try
@@ -74,11 +74,11 @@ public sealed class RootFindingService : IRootFindingService
             }
             catch (ExpressionParseException)
             {
-                return Invalid("Expressão inválida para f'(x).");
+                return Invalid("Expressão inválida para φ(x).");
             }
             catch (Exception)
             {
-                return Invalid("Não foi possível interpretar a expressão fornecida para f'(x).");
+                return Invalid("Não foi possível interpretar a expressão fornecida.para f'(x).");
             }
         }
 
@@ -92,7 +92,7 @@ public sealed class RootFindingService : IRootFindingService
             _ => new RootFindingResult
             {
                 Status = SolverStatus.NotImplemented,
-                Message = "Método de raiz não reconhecido.",
+                Message = "Método de raiz não reconhecido.",               
                 Root = null,
                 Iterations = 0,
                 ElapsedMs = 0
@@ -111,7 +111,7 @@ public sealed class RootFindingService : IRootFindingService
         var b = request.B.Value;
         if (a >= b)
         {
-            return Invalid("É necessário que 'a' seja menor que 'b' para a Bisseção.");
+            return Invalid("É É necessário que 'a' seja menor que 'b' para a Bisseção.");
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -183,7 +183,7 @@ public sealed class RootFindingService : IRootFindingService
         var b = request.B.Value;
         if (a >= b)
         {
-            return Invalid("É necessário que 'a' seja menor que 'b' para Regula Falsi.");
+            return Invalid("É É necessário que 'a' seja menor que 'b' para Regula Falsi.");
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -283,7 +283,7 @@ public sealed class RootFindingService : IRootFindingService
 
         if (!firstGuess.HasValue || !secondGuess.HasValue)
         {
-            return Invalid("É necessário fornecer dois chutes iniciais para a Secante.");
+            return Invalid("É É necessário fornecer dois chutes iniciais para a Secante.");
         }
 
         if (Math.Abs(firstGuess.Value - secondGuess.Value) < SmallNumber)
@@ -356,82 +356,92 @@ public sealed class RootFindingService : IRootFindingService
         var x0 = request.InitialGuess.Value;
         var stopwatch = Stopwatch.StartNew();
         var steps = returnSteps ? new List<RootFindingStep>() : null;
-        var fx = f(x0);
 
-        if (HasDiverged(x0, fx))
+        if (!TryEvaluateFunction(f, x0, out var fx0, out var fx0Error))
         {
-            AddStep(steps, 0, x0, fx, null, null, null);
-            return Divergence("Iterações divergiram no método de Newton.", x0, 0, stopwatch, steps);
+            AddStep(steps, 0, x0, double.NaN);
+            return Invalid($"Não foi possível avaliar f(x) no chute inicial: {fx0Error}", steps);
         }
 
-        if (Math.Abs(fx) <= request.Tolerance)
+        AddStep(steps, 0, x0, fx0, null, null, 0);
+
+        if (HasDiverged(x0, fx0))
+        {
+            return Divergence("Iterações divergiram no método de Newton.", null, 0, stopwatch, steps);
+        }
+
+        if (Math.Abs(fx0) <= request.Tolerance)
         {
             return Success(x0, 0, stopwatch, steps);
         }
 
         var iteration = 1;
-        var derivativeAtX0 = derivative?.Invoke(x0) ?? ApproximateDerivative(f, x0);
-        if (Math.Abs(derivativeAtX0) < SmallNumber)
+        var currentFx = fx0;
+
+        while (true)
         {
-            return Divergence("Derivada próxima de zero no método de Newton.", x0, iteration, stopwatch, steps);
-        }
-
-        var x1 = x0 - fx / derivativeAtX0;
-        fx = f(x1);
-        var error = Math.Abs(x1 - x0);
-
-        if (HasDiverged(x1, fx))
-        {
-            AddStep(steps, iteration, x1, fx, null, null, error);
-            return Divergence("Iterações divergiram no método de Newton.", x1, iteration, stopwatch, steps);
-        }
-
-        AddStep(steps, iteration, x1, fx, null, null, error);
-
-        while (Math.Abs(fx) > request.Tolerance && Math.Abs(x1 - x0) > request.Tolerance && iteration <= request.MaxIterations)
-        {
-            iteration++;
-            x0 = x1;
-
             var derivativeAtX = derivative?.Invoke(x0) ?? ApproximateDerivative(f, x0);
             if (Math.Abs(derivativeAtX) < SmallNumber)
             {
-                return Divergence("Derivada próxima de zero no método de Newton.", x0, iteration, stopwatch, steps);
+                return Divergence("Derivada próxima de zero no método de Newton.", null, iteration, stopwatch, steps);
             }
 
-            var fxAtX0 = f(x0);
-            x1 = x0 - fxAtX0 / derivativeAtX;
-            fx = f(x1);
-            error = Math.Abs(x1 - x0);
-
-            if (HasDiverged(x1, fx))
+            var x1 = x0 - currentFx / derivativeAtX;
+            if (!TryEvaluateFunction(f, x1, out var fx1, out var fx1Error))
             {
-                AddStep(steps, iteration, x1, fx, null, null, error);
-                return Divergence("Iterações divergiram no método de Newton.", x1, iteration, stopwatch, steps);
+                AddStep(steps, iteration, x1, double.NaN, null, null, Math.Abs(x1 - x0));
+                return Divergence($"Não foi possível avaliar f(x) no método de Newton: {fx1Error}", null, iteration, stopwatch, steps);
             }
 
-            AddStep(steps, iteration, x1, fx, null, null, error);
-        }
+            var error = Math.Abs(x1 - x0);
 
-        if (Math.Abs(fx) > request.Tolerance && Math.Abs(x1 - x0) > request.Tolerance && iteration > request.MaxIterations)
-        {
-            return MaxIterations(x1, iteration, stopwatch, steps);
-        }
+            if (HasDiverged(x1, fx1))
+            {
+                AddStep(steps, iteration, x1, fx1, null, null, error);
+                return Divergence("Iterações divergiram no método de Newton.", null, iteration, stopwatch, steps);
+            }
 
-        return Success(x1, iteration, stopwatch, steps);
+            AddStep(steps, iteration, x1, fx1, null, null, error);
+
+            if (Math.Abs(fx1) <= request.Tolerance || error <= request.Tolerance)
+            {
+                return Success(x1, iteration, stopwatch, steps);
+            }
+
+            if (iteration >= request.MaxIterations)
+            {
+                return MaxIterations(null, iteration, stopwatch, steps);
+            }
+
+            x0 = x1;
+            currentFx = fx1;
+            iteration++;
+        }
     }
 
     private RootFindingResult SolveWithFixedPoint(Func<double, double> f, Func<double, double> phi, RootFindingRequest request, bool returnSteps)
     {
         if (!request.InitialGuess.HasValue)
         {
-            return Invalid("É necessário fornecer um chute inicial para o método do ponto fixo.");
+            return Invalid("É É necessário fornecer um chute inicial para o método do ponto fixo.");
         }
 
         var x0 = request.InitialGuess.Value;
         var stopwatch = Stopwatch.StartNew();
         var steps = returnSteps ? new List<RootFindingStep>() : null;
-        var fx0 = f(x0);
+
+        if (!TryEvaluateFunction(f, x0, out var fx0, out var fx0Error))
+        {
+            AddStep(steps, 0, x0, double.NaN);
+            return Invalid($"Não foi possível avaliar f(x) no chute inicial: {fx0Error}", steps);
+        }
+
+        AddStep(steps, 0, x0, fx0, null, null, 0);
+
+        if (!TryEvaluateFunction(phi, x0, out var nextGuess, out var phiError))
+        {
+            return Invalid("Função φ(x) inválida ou não pôde ser avaliada no chute inicial.", steps);
+        }
 
         if (Math.Abs(fx0) < request.Tolerance)
         {
@@ -442,27 +452,68 @@ public sealed class RootFindingService : IRootFindingService
 
         while (true)
         {
-            var x1 = phi(x0);
-            var fx1 = f(x1);
-            var error = Math.Abs(x1 - x0);
-
-            if (HasDiverged(x1, fx1))
+            if (!TryEvaluateFunction(f, nextGuess, out var fx1, out var fx1Error))
             {
-                AddStep(steps, iteration, x1, fx1, null, null, error);
-                return Divergence("Iterações divergiram no método do ponto fixo.", x1, iteration, stopwatch, steps);
+                AddStep(steps, iteration, nextGuess, double.NaN, null, null, Math.Abs(nextGuess - x0));
+                return Divergence($"Não foi possível avaliar f(x) no método do ponto fixo: {fx1Error}", null, iteration, stopwatch, steps);
             }
 
-            AddStep(steps, iteration, x1, fx1, null, null, error);
+            var error = Math.Abs(nextGuess - x0);
 
-            if (Math.Abs(fx1) < request.Tolerance || error < request.Tolerance || iteration > request.MaxIterations)
+            if (HasDiverged(nextGuess, fx1))
             {
-                return iteration > request.MaxIterations
-                    ? MaxIterations(x1, iteration, stopwatch, steps)
-                    : Success(x1, iteration, stopwatch, steps);
+                AddStep(steps, iteration, nextGuess, fx1, null, null, error);
+                return Divergence("Iterações divergiram no método do ponto fixo.", null, iteration, stopwatch, steps);
             }
 
-            x0 = x1;
+            AddStep(steps, iteration, nextGuess, fx1, null, null, error);
+
+            if (Math.Abs(fx1) < request.Tolerance || error < request.Tolerance)
+            {
+                return Success(nextGuess, iteration, stopwatch, steps);
+            }
+
+            if (iteration >= request.MaxIterations)
+            {
+                return MaxIterations(null, iteration, stopwatch, steps);
+            }
+
+            x0 = nextGuess;
+
+            if (!TryEvaluateFunction(phi, x0, out nextGuess, out phiError))
+            {
+                return Invalid("Função φ(x) inválida ou não pôde ser avaliada durante as iterações.", steps);
+            }
+
             iteration++;
+        }
+    }
+
+    private static bool TryEvaluateFunction(Func<double, double> function, double x, out double value, out string errorMessage)
+    {
+        try
+        {
+            value = function(x);
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                errorMessage = "Resultado não numérico para a expressão.";
+                return false;
+            }
+
+            errorMessage = string.Empty;
+            return true;
+        }
+        catch (ExpressionParseException ex)
+        {
+            value = double.NaN;
+            errorMessage = ex.Message;
+            return false;
+        }
+        catch (Exception)
+        {
+            value = double.NaN;
+            errorMessage = "Não foi possível avaliar a expressão.";
+            return false;
         }
     }
 
@@ -543,24 +594,26 @@ public sealed class RootFindingService : IRootFindingService
         {
             Status = SolverStatus.Divergence,
             Message = message,
-            Root = root,
+            Root = null,
             Iterations = iterations,
             ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
             Steps = steps
         };
     }
 
-    private static RootFindingResult MaxIterations(double root, int iterations, Stopwatch stopwatch, List<RootFindingStep>? steps = null)
+    private static RootFindingResult MaxIterations(double? root, int iterations, Stopwatch stopwatch, List<RootFindingStep>? steps = null)
     {
         stopwatch.Stop();
         return new RootFindingResult
         {
             Status = SolverStatus.MaxIterationsReached,
             Message = "Número máximo de iterações atingido sem convergência na tolerância especificada.",
-            Root = root,
+            Root = null,
             Iterations = iterations,
             ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
             Steps = steps
         };
     }
 }
+
+

@@ -36,6 +36,23 @@ if (app.Environment.IsDevelopment())
 
 app.UseRouting();
 app.UseCors(CorsPolicyName);
+
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (string.IsNullOrEmpty(context.Response.ContentType))
+    {
+        return;
+    }
+
+    if (context.Response.ContentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) &&
+        !context.Response.ContentType.Contains("charset=", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.ContentType = "application/json; charset=utf-8";
+    }
+});
+
 app.MapControllers();
 
 app.Run();

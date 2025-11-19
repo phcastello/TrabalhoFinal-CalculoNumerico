@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NumericalMethods.Core", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NumericalMethods.Api", "src\NumericalMethods.Api\NumericalMethods.Api.csproj", "{0B2ED06D-74ED-4A6E-A2FC-81750FA8C67B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NumericalMethods.Tests", "tests\NumericalMethods.Tests\NumericalMethods.Tests.csproj", "{71D918B7-3503-48C3-9408-D3C1F4A496E1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +28,10 @@ Global
 		{0B2ED06D-74ED-4A6E-A2FC-81750FA8C67B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0B2ED06D-74ED-4A6E-A2FC-81750FA8C67B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0B2ED06D-74ED-4A6E-A2FC-81750FA8C67B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71D918B7-3503-48C3-9408-D3C1F4A496E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71D918B7-3503-48C3-9408-D3C1F4A496E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71D918B7-3503-48C3-9408-D3C1F4A496E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71D918B7-3503-48C3-9408-D3C1F4A496E1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C570C343-B365-44FD-9458-EB6E8D5D2897} = {9BB03117-8312-4684-9A89-F4186CEB6B3E}

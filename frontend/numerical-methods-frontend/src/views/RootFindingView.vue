@@ -150,7 +150,10 @@
         {{ response.message }}
       </p>
 
-      <div v-if="response.root !== null && response.root !== undefined" class="solution-block">
+      <div
+        v-if="response.status === SolverStatus.Success && response.root !== null && response.root !== undefined"
+        class="solution-block"
+      >
         <h4>Raiz aproximada</h4>
         <p class="solution-value">x ≈ {{ response.root }}</p>
       </div>

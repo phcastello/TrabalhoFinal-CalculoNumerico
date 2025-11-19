@@ -84,7 +84,10 @@
         {{ response.message }}
       </p>
 
-      <div v-if="response.solution && response.solution.length" class="solution-block">
+      <div
+        v-if="response.status === SolverStatus.Success && response.solution && response.solution.length"
+        class="solution-block"
+      >
         <h4>Solução aproximada</h4>
         <ul class="solution-list">
           <li v-for="(value, index) in response.solution" :key="index">

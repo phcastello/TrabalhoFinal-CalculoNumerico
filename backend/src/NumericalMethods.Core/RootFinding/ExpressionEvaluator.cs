@@ -38,12 +38,16 @@ public static class ExpressionEvaluator
         {"-", 1},
         {"*", 2},
         {"/", 2},
-        {"^", 3}
+        {"neg", 3},
+        {"pos", 3},
+        {"^", 4}
     };
 
     private static readonly HashSet<string> RightAssociativeOperators = new(StringComparer.OrdinalIgnoreCase)
     {
-        "^"
+        "^",
+        "neg",
+        "pos"
     };
 
     private static readonly Dictionary<string, double> Constants = new(StringComparer.OrdinalIgnoreCase)
@@ -203,7 +207,8 @@ public static class ExpressionEvaluator
 
                 if (expectUnary && (op == "+" || op == "-"))
                 {
-                    AddToken(new Token(TokenType.Function, op == "-" ? "neg" : "pos"));
+                    var unary = op == "-" ? "neg" : "pos";
+                    AddToken(new Token(TokenType.Operator, unary));
                 }
                 else
                 {
@@ -241,9 +246,9 @@ public static class ExpressionEvaluator
                 case TokenType.Operator:
                     while (stack.Count > 0 &&
                            (stack.Peek().Type == TokenType.Function ||
-                               (stack.Peek().Type == TokenType.Operator &&
-                                (IsLeftAssociative(token.Text) && Precedence(token.Text) <= Precedence(stack.Peek().Text) ||
-                                 !IsLeftAssociative(token.Text) && Precedence(token.Text) < Precedence(stack.Peek().Text)))))
+                            (stack.Peek().Type == TokenType.Operator &&
+                             (IsLeftAssociative(token.Text) && Precedence(token.Text) <= Precedence(stack.Peek().Text) ||
+                              !IsLeftAssociative(token.Text) && Precedence(token.Text) < Precedence(stack.Peek().Text)))))
                     {
                         output.Add(stack.Pop());
                     }
@@ -325,6 +330,19 @@ public static class ExpressionEvaluator
                     stack.Push(x);
                     break;
                 case TokenType.Operator:
+                    if (string.Equals(token.Text, "neg", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(token.Text, "pos", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (stack.Count < 1)
+                        {
+                            throw new ExpressionParseException("Operadores insuficientes na expressão.");
+                        }
+
+                        var operand = stack.Pop();
+                        stack.Push(ApplyUnaryOperator(token.Text, operand));
+                        break;
+                    }
+
                     if (stack.Count < 2)
                     {
                         throw new ExpressionParseException("Operadores insuficientes na expressão.");
@@ -353,6 +371,13 @@ public static class ExpressionEvaluator
 
         return stack.Pop();
     }
+
+    private static double ApplyUnaryOperator(string op, double value) => op.ToLowerInvariant() switch
+    {
+        "neg" => -value,
+        "pos" => value,
+        _ => throw new ExpressionParseException($"Operador desconhecido: {op}")
+    };
 
     private static double ApplyOperator(string op, double left, double right) => op switch
     {

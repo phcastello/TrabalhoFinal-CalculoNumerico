@@ -42,12 +42,30 @@ public sealed class LinearSystemSolverService : ILinearSystemSolverService
 
         for (var k = 0; k < n; k++)
         {
-            var pivot = a[k, k];
-            if (Math.Abs(pivot) < PivotTolerance)
+            var pivotRow = k;
+            var max = Math.Abs(a[k, k]);
+            for (var i = k + 1; i < n; i++)
             {
-                return SingularResult("Pivô próximo de zero durante eliminação de Gauss sem pivoteamento.", stopwatch);
+                var candidate = Math.Abs(a[i, k]);
+                if (candidate > max)
+                {
+                    max = candidate;
+                    pivotRow = i;
+                }
             }
 
+            if (max < PivotTolerance)
+            {
+                return SingularResult("Pivô próximo de zero durante eliminação de Gauss.", stopwatch);
+            }
+
+            if (pivotRow != k)
+            {
+                SwapRows(a, k, pivotRow);
+                (b[k], b[pivotRow]) = (b[pivotRow], b[k]);
+            }
+
+            var pivot = a[k, k];
             for (var i = k + 1; i < n; i++)
             {
                 var factor = a[i, k] / pivot;
@@ -213,55 +231,78 @@ public sealed class LinearSystemSolverService : ILinearSystemSolverService
     {
         var stopwatch = Stopwatch.StartNew();
         var n = system.N;
-        var A = LinearAlgebraUtils.CloneMatrix(system.A);
+        var lu = LinearAlgebraUtils.CloneMatrix(system.A);
         var b = LinearAlgebraUtils.CloneVector(system.B);
-        var L = new double[n, n];
-        var U = new double[n, n];
 
-        for (var i = 0; i < n; i++)
+        for (var k = 0; k < n; k++)
         {
-            for (var k = i; k < n; k++)
+            var pivotRow = k;
+            var max = Math.Abs(lu[k, k]);
+            for (var i = k + 1; i < n; i++)
             {
-                double sum = 0;
-                for (var j = 0; j < i; j++)
+                var candidate = Math.Abs(lu[i, k]);
+                if (candidate > max)
                 {
-                    sum += L[i, j] * U[j, k];
+                    max = candidate;
+                    pivotRow = i;
                 }
-
-                U[i, k] = A[i, k] - sum;
             }
 
-            for (var k = i; k < n; k++)
+            if (max < PivotTolerance)
             {
-                if (i == k)
-                {
-                    L[i, i] = 1;
-                }
-                else
-                {
-                    double sum = 0;
-                    for (var j = 0; j < i; j++)
-                    {
-                        sum += L[k, j] * U[j, i];
-                    }
+                return SingularResult("Pivô próximo de zero durante fatoração LU com pivoteamento.", stopwatch);
+            }
 
-                    var pivot = U[i, i];
-                    if (Math.Abs(pivot) < PivotTolerance)
-                    {
-                        return SingularResult("Pivô próximo de zero durante fatoração LU.", stopwatch);
-                    }
+            if (pivotRow != k)
+            {
+                SwapRows(lu, k, pivotRow);
+                (b[k], b[pivotRow]) = (b[pivotRow], b[k]);
+            }
 
-                    L[k, i] = (A[k, i] - sum) / pivot;
+            for (var i = k + 1; i < n; i++)
+            {
+                lu[i, k] /= lu[k, k];
+                for (var j = k + 1; j < n; j++)
+                {
+                    lu[i, j] -= lu[i, k] * lu[k, j];
                 }
             }
         }
 
         try
         {
-            var y = LinearAlgebraUtils.ForwardSubstitution(L, b);
-            var solution = LinearAlgebraUtils.BackwardSubstitution(U, y);
+            var y = new double[n];
+            for (var i = 0; i < n; i++)
+            {
+                double sum = 0;
+                for (var j = 0; j < i; j++)
+                {
+                    sum += lu[i, j] * y[j];
+                }
+
+                y[i] = b[i] - sum;
+            }
+
+            var x = new double[n];
+            for (var i = n - 1; i >= 0; i--)
+            {
+                double sum = 0;
+                for (var j = i + 1; j < n; j++)
+                {
+                    sum += lu[i, j] * x[j];
+                }
+
+                var pivot = lu[i, i];
+                if (Math.Abs(pivot) < PivotTolerance)
+                {
+                    return SingularResult("Pivô próximo de zero durante fatoração LU com pivoteamento.", stopwatch);
+                }
+
+                x[i] = (y[i] - sum) / pivot;
+            }
+
             stopwatch.Stop();
-            return SuccessResult(solution, 0, stopwatch);
+            return SuccessResult(x, 0, stopwatch);
         }
         catch (InvalidOperationException ex)
         {
@@ -441,7 +482,7 @@ public sealed class LinearSystemSolverService : ILinearSystemSolverService
                     Message = "Iterações divergiram no método de Jacobi.",
                     Iterations = iteration,
                     ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
-                    Solution = LinearAlgebraUtils.CloneVector(xNew)
+                    Solution = Array.Empty<double>()
                 };
             }
 
@@ -459,7 +500,7 @@ public sealed class LinearSystemSolverService : ILinearSystemSolverService
         {
             Status = SolverStatus.MaxIterationsReached,
             Iterations = parameters.MaxIterations,
-            Solution = LinearAlgebraUtils.CloneVector(xNew),
+            Solution = Array.Empty<double>(),
             ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
             Message = "Número máximo de iterações atingido no método de Jacobi."
         };
@@ -517,7 +558,7 @@ public sealed class LinearSystemSolverService : ILinearSystemSolverService
                     Message = "Iterações divergiram no método de Gauss-Seidel.",
                     Iterations = iteration,
                     ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
-                    Solution = LinearAlgebraUtils.CloneVector(x)
+                    Solution = Array.Empty<double>()
                 };
             }
 
@@ -533,7 +574,7 @@ public sealed class LinearSystemSolverService : ILinearSystemSolverService
         {
             Status = SolverStatus.MaxIterationsReached,
             Iterations = parameters.MaxIterations,
-            Solution = LinearAlgebraUtils.CloneVector(x),
+            Solution = Array.Empty<double>(),
             ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
             Message = "Número máximo de iterações atingido no método de Gauss-Seidel."
         };
